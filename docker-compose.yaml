@@ -1,0 +1,26 @@
+version: '3.1'
+services:
+  app:
+    container_name: spring-postgresql
+    image: springbootapp
+    build:
+      context: ./
+      dockerfile: .Dockerfile
+    ports:
+      - "9090:9090"
+    depends_on:
+      - dbpostgresql
+
+  dbpostgresql:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      - POSTGRES_DB=sk_db
+      - POSTGRES_USER=sk_user
+      - POSTGRES_PASSWORD=sk_user
+    volumes:
+    - ./create_db_and_user.sql:/docker-entrypoint-initdb.d/create_db_and_user.sql
+    - ./clear_tables.sql:/docker-entrypoint-initdb.d/clear_tables.sql
+    - ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
