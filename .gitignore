@@ -31,6 +31,7 @@ out/
 ### VS Code ###
 .vscode/
 
+### Volums  ###
 initdb.sh
 clear_tables.sql
 create_db_and_users.sql

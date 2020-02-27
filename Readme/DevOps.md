@@ -10,9 +10,9 @@ Set in [application.properties file](../src/main/resources/application.propertie
 
 Check your Postgres service status. Please, turn of PostgreSQL service to avoid conflict between docker and postgress services  
 
-    systemctl status postgres
+    systemctl status postgresql
     
-    systemctl stop postgres
+    systemctl stop postgresql
 
 
 Build a project file 

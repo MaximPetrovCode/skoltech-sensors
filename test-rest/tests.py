@@ -25,12 +25,15 @@ class Latest(unittest.TestCase):
         url = 'http://localhost:9090/api/latest?id=1'
         r = requests.get(url)
         data = r.json()
-        # check object id of element
-        self.assertEqual(data['objectId'] == 1, True)
-        # check value
-        self.assertEqual(data['value'] == -27, True)
-        # check status
-        self.assertEqual(r.status_code == 200, True)
+
+        sensorContainer = []
+        # check that all elements with sensorId equal to 1
+        for obj in data:
+            sensorContainer.append(obj['sensorId'])
+            self.assertEqual(obj['objectId'], 1)
+
+        # Check uniqueness of sensors
+        self.assertEqual(len(set(sensorContainer)), len(data))
 
 
 class Avg(unittest.TestCase):
@@ -61,14 +64,18 @@ class History(unittest.TestCase):
         r = requests.get(url)
         # check status
         self.assertEqual(r.status_code == 200, False)
-        url = 'http://localhost:9090/api/history?id=1&from=1514764800&to=1514764801'
+        fromTime: int = 1514764800
+        toTime: int = 1514764810
+        url = 'http://localhost:9090/api/history?id=1&from=' + str(fromTime) + '&to=' + str(toTime)
         r = requests.get(url)
         data = r.json()
         # check amount of elements
-        self.assertEqual(len(data), 6)
-        # check that all elements with objectId equal to 1
+        self.assertEqual(len(data), 20)
+        # check that all elements with sensorId equal to 1
         for obj in data:
-            self.assertEqual(obj['objectId'], 1)
+            self.assertEqual(obj['sensorId'], 1)
+            self.assertEqual(obj['time'] >= fromTime, True)
+            self.assertEqual(obj['time'] <= toTime, True)
         # check status
         self.assertEqual(r.status_code == 200, True)
 

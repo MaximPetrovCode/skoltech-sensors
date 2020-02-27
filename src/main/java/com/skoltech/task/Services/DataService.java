@@ -2,9 +2,11 @@ package com.skoltech.task.Services;
 
 import com.skoltech.task.Models.Dtos.Requests.DataRequest;
 import com.skoltech.task.Models.Entities.Helpers.AvgValue;
+import com.skoltech.task.Models.Entities.Helpers.ObjectToSensor;
 import com.skoltech.task.Models.Entities.ObjectEntity;
 import com.skoltech.task.Models.Entities.SensorEntity;
 import com.skoltech.task.Models.Entities.ValueEntity;
+import com.skoltech.task.Repositories.ConnectRepository;
 import com.skoltech.task.Repositories.ObjectRepository;
 import com.skoltech.task.Repositories.SensorRepository;
 import com.skoltech.task.Repositories.ValueRepository;
@@ -13,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,32 +25,51 @@ public class DataService {
 
     private final SensorRepository sensorRepository;
 
-    public DataService(ValueRepository valueRepository, ObjectRepository objectRepository, SensorRepository sensorRepository) {
+    private final ConnectRepository connectRepository;
+
+    public DataService(ValueRepository valueRepository, ObjectRepository objectRepository, SensorRepository sensorRepository, ConnectRepository connectRepository) {
         this.valueRepository = valueRepository;
         this.objectRepository = objectRepository;
         this.sensorRepository = sensorRepository;
+        this.connectRepository = connectRepository;
     }
 
     public Integer saveValues(List<DataRequest> values) {
-        List<ValueEntity> entities = values.stream().map(v -> {
+        values.forEach(v -> {
             ValueEntity entity = new ValueEntity();
 
-            SensorEntity sensorEntity = new SensorEntity();
-            sensorEntity.setId(v.getSensorId());
-            SensorEntity senEntity = sensorRepository.save(sensorEntity);
-            entity.setSensor(senEntity);
+            Optional<SensorEntity> sensor = sensorRepository.findByIndex(v.getSensorId());
+            SensorEntity sensorEntity = sensor.orElseGet(() -> {
+                SensorEntity sen = new SensorEntity();
+                sen.setId(v.getSensorId());
+                return sensorRepository.save(sen);
+            });
 
-            ObjectEntity objectEntity = new ObjectEntity();
-            objectEntity.setId(v.getObjectId());
-            ObjectEntity objEntity = objectRepository.save(objectEntity);
-            entity.setObject(objEntity);
+            Optional<ObjectEntity> object = objectRepository.findByIndex(v.getObjectId());
+            ObjectEntity objectEntity = object.orElseGet(() -> {
+                ObjectEntity obj = new ObjectEntity();
+                obj.setId(v.getObjectId());
+                return objectRepository.save(obj);
+            });
 
+            entity.setSensor(sensorEntity);
+            entity.setObject(objectEntity);
             entity.setTime(v.getTime());
             entity.setValue(v.getValue());
-            return entity;
-        }).collect(Collectors.toList());
-        valueRepository.saveAll(entities);
+
+            Optional<ObjectToSensor> connect = connectRepository.findByObjectAndSensor(entity.getObject().getId(), entity.getSensor().getId());
+            ObjectToSensor connectEntity = connect.orElseGet(() -> {
+                ObjectToSensor con = new ObjectToSensor();
+                con.setObject(objectEntity);
+                con.setSensor(sensorEntity);
+                return this.connectRepository.save(con);
+            });
+
+            valueRepository.save(entity);
+        });
+
         this.deleteDuplicates();
+
         Optional<Integer> amount = valueRepository.countAll();
         return amount.orElse(0);
     }
@@ -58,7 +78,7 @@ public class DataService {
         valueRepository.deleteDuplicates();
     }
 
-    public Optional<ValueEntity> getLatestById(Integer id) {
+    public Optional<List<ValueEntity>> getLatestById(Integer id) {
         return valueRepository.findLatest(id);
     }
 
@@ -66,7 +86,7 @@ public class DataService {
         return Optional.ofNullable(valueRepository.getAvg());
     }
 
-    public Optional<List<ValueEntity>> getByInterval(Integer id, Long from,  Long to) {
-        return valueRepository.findByInterval(id, from, to);
+    public Optional<List<ValueEntity>> getByInterval(Integer sensorId, Long from, Long to) {
+        return valueRepository.findByInterval(sensorId, from, to);
     }
 }

@@ -32,11 +32,10 @@ public class MainController {
     }
 
     @GetMapping("/latest")
-    public DataResponse getLatest(@RequestParam Integer id) throws Exception {
-        Optional<ValueEntity> latestById = dataService.getLatestById(id);
+    public List<DataResponse> getLatest(@RequestParam Integer id) {
+        Optional<List<ValueEntity>> latestById = dataService.getLatestById(id);
         if (latestById.isPresent()) {
-            ValueEntity entity = latestById.get();
-            return Mapper.mapEntityToResponse(entity);
+            return latestById.get().stream().map(Mapper::mapEntityToResponse).collect(Collectors.toList());
         }
 
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "There is no result for this object");
@@ -44,8 +43,8 @@ public class MainController {
 
     @GetMapping("/history")
     public List<DataResponse> getHistory(@RequestParam Integer id,
-                                              @RequestParam Long from,
-                                              @RequestParam Long to) throws Exception {
+                                         @RequestParam Long from,
+                                         @RequestParam Long to) {
         Optional<List<ValueEntity>> entities = dataService.getByInterval(id, from, to);
         return entities.map(valueEntities -> valueEntities.stream()
                 .map(Mapper::mapEntityToResponse).collect(Collectors.toCollection(ArrayList::new)))
@@ -53,7 +52,7 @@ public class MainController {
     }
 
     @GetMapping("/avg")
-    public List<AvgResponse> getAvg() throws Exception {
+    public List<AvgResponse> getAvg() {
         Optional<List<AvgValue>> avg = dataService.getAvg();
         if (avg.isPresent()) {
             return avg.get().stream().map(entity -> AvgResponse.builder()
